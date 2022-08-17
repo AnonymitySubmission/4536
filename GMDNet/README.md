@@ -13,6 +13,8 @@ python train.py
 The structure of our code and description of important files are given as follows:  
 │────algorithm/  
 │    ├────GMDNet/: code of GMDNet
+
 ├────data/: data used for train, validation, and test
+
 ├────my_utils/  
 │    ├────utils.py   
