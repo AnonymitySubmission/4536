@@ -12,9 +12,7 @@ python train.py
 # Repo Structure
 The structure of our code and description of important files are given as follows:  
 │────algorithm/  
-│    ├────GMDN/: code of GMDN.  
+│    ├────GMDNet/: code of GMDNet.  
 │────data/: data used for train, validation, and test.  
 │────my_utils/  
 │    ├────util.py
-
-
