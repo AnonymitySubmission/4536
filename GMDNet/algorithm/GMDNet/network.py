@@ -117,19 +117,19 @@ class Encoder(nn.Module):
             pe_table.append(pos_en)
         return torch.FloatTensor(pe_table)
 
-    def forward(self, X, route, mask, edge, node, A):
-        B = X.shape[0]
+    def forward(self, f, route, mask, edge, node, A):
+        B = f.shape[0]
         N = edge.shape[1]
         #Select the graph based on the time slice
-        time_index = X[:, 0]
+        time_index = f[:, 0]
         edge = edge[time_index.long()]
         node = node[time_index.long()]
         A = A[time_index.long()]
 
         #initial node_embedding
-        node_embed = self.nodes_embedding(node[:, :, 1: 4])
+        node_embed = self.nodes_embedding(node[:, :, 1:])
         #initial edge_embedding
-        e_vals = self.edges_values_embedding(edge[:, :, :, 2: 7])
+        e_vals = self.edges_values_embedding(edge[:, :, :, 2:])
         e_tags = self.edges_embedding(A)
         e = torch.cat((e_vals, e_tags), dim=3)
         #Spatial Dependency Modeling
@@ -137,20 +137,20 @@ class Encoder(nn.Module):
             nodes_embed, e = self.gcn_layers[layer](node_embed, e)
         edge = self.edge_linear(e).reshape(B, N, N, -1)  # [B, N, N, H]
 
-        # Look up route embedding
+        # Look up edge embedding to obtain route embedding
         from_node_index = route[:, :, 0]
         to_node_index = route[:, :, 1]
         R = edge[:, from_node_index, to_node_index, :].diagonal(dim1=0, dim2=1).permute(2, 0, 1).contiguous()
 
         # Position Embedding
-        PE = torch.repeat_interleave(self.positional_encoding().unsqueeze(0), repeats=B, dim=0).to(X.device)  # [B, seq_len, dim]
+        PE = torch.repeat_interleave(self.positional_encoding().unsqueeze(0), repeats=B, dim=0).to(f.device)  # [B, seq_len, dim]
         R = torch.cat([R, PE], dim=2)
-        t_s = self.time_embed(X[:, 1].unsqueeze(1).unsqueeze(1).repeat(1, route.shape[1], 1).long()).squeeze(2)
+        t_s = self.time_embed(f[:, 1].unsqueeze(1).unsqueeze(1).repeat(1, route.shape[1], 1).long()).squeeze(2)
         R = torch.cat([R, t_s], dim=2).reshape(B, self.max_seq_len, self.edge_out_dim * 2 +  t_s.shape[-1])
 
         # Mutual Correlation Modeling
         r = self.route_update(R, mask)
-        r = torch.cat([X[:, 1: 9], r.reshape(r.shape[0], -1)], dim=1)
+        r = torch.cat([r.reshape(r.shape[0], -1), f[:, 1:]], dim=1)
         return r
 
 class Decoder(nn.Module):
@@ -218,8 +218,9 @@ class GMDNet(nn.Module):
         emission_of_true_labels = torch.exp(m.log_prob(labels.float()))
         unnorm_posterior_estimate = torch.mul(emission_of_true_labels, pi) + (1e-8)
         posterior_estimate = unnorm_posterior_estimate / unnorm_posterior_estimate.sum(dim=1, keepdim=True)
+        E_log_likelihood = torch.mean(torch.mul(posterior_estimate, unnorm_posterior_estimate.log()))
         prior_term = torch.mean(dirichlet.log_prob(pi), dim=0)
-        objective = torch.mean(torch.mul(posterior_estimate, unnorm_posterior_estimate.log())) + prior_term
+        objective = E_log_likelihood + prior_term
         return -objective
 
     def M_step(self):
@@ -229,6 +230,7 @@ class GMDNet(nn.Module):
         '''
          :param route: (batch, seq_len, d_od)
          :param mask: (batch, seq_len, seq_len)
+         :param f: (batch, d_f)
          :param edge: (T, N, N, d_edge)
          :param node:  (T, N, d_node)
          :param labels: (batch, d_label)

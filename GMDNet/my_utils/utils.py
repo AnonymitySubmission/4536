@@ -221,20 +221,20 @@ def run(params, DATASET, PROCESS_BATCH, TEST_MODEL, collate_fn=None):
     prob_dist_dict = {}  # {(node_i, node_j): [block_len, block_len]}
 
     train_dataset = DATASET(mode='train', params=params)
-    train_loader = DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=False, collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True, collate_fn=collate_fn)
     train_edge = train_dataset.data['edge']
     train_node = train_dataset.data['node']
     train_A = train_dataset.data['A']
 
     val_dataset = DATASET(mode='val', params=params)
-    val_loader = DataLoader(val_dataset, batch_size=params['batch_size'], shuffle=False,
+    val_loader = DataLoader(val_dataset, batch_size=params['batch_size'], shuffle=True,
                             collate_fn=collate_fn)  # cfg.batch_size
     val_edge = val_dataset.data['edge']
     val_node = val_dataset.data['node']
     val_A = val_dataset.data['A']
 
     test_dataset = DATASET(mode='test', params=params)
-    test_loader = DataLoader(test_dataset, batch_size=params['batch_size'], shuffle=False,
+    test_loader = DataLoader(test_dataset, batch_size=params['batch_size'], shuffle=True,
                              collate_fn=collate_fn)  # , collate_fn=collate_fn
     test_edge = test_dataset.data['edge']
     test_node = test_dataset.data['node']
