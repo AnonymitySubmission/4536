@@ -81,10 +81,11 @@ def test_model(model, test_dataloader, device, edge, node, A):
             pred = torch.sum(m.mean * pi, dim=1).unsqueeze(1)
 
             log_likelihood = torch.mean(torch.mul(m.log_prob(label.float()), pi))
+            log_likelihood_list += [log_likelihood.cpu().item()]
             predicts_list += pred.detach().cpu().tolist()
             label_list += label.detach().cpu().tolist()
-            log_likelihood = np.array(log_likelihood_list)
-
+        
+        log_likelihood = np.array(log_likelihood_list)
         predicts = np.array(predicts_list)
         labels = np.array(label_list)
 
