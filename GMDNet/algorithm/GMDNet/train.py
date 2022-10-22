@@ -63,6 +63,7 @@ def process_batch(batch, model, device, edge, node, A):
 def test_model(model, test_dataloader, device, edge, node, A):
     predicts_list = []
     label_list = []
+    log_likelihood_list = []
     model.eval()
     edge = torch.FloatTensor(edge).to(device)
     node = torch.FloatTensor(node).to(device)
@@ -82,6 +83,7 @@ def test_model(model, test_dataloader, device, edge, node, A):
             log_likelihood = torch.mean(torch.mul(m.log_prob(label.float()), pi))
             predicts_list += pred.detach().cpu().tolist()
             label_list += label.detach().cpu().tolist()
+            log_likelihood = np.array(log_likelihood_list)
 
         predicts = np.array(predicts_list)
         labels = np.array(label_list)
@@ -91,11 +93,11 @@ def test_model(model, test_dataloader, device, edge, node, A):
 
         print('mape:', mape(labels, predicts))
         print('mae:', mae(labels, predicts))
-        print('log-likelihood:', log_likelihood.item())
+        print('log-likelihood:', log_likelihood.mean())
 
         val_mae = mae(labels, predicts)
         val_mape = mape(labels, predicts)
-        return val_mae, val_mape, log_likelihood.item()
+        return val_mae, val_mape, log_likelihood.mean()
 
 def get_params():
     from GMDNet.my_utils.utils import get_common_params
@@ -132,7 +134,7 @@ if __name__ == '__main__':
         logger.debug(tuner_params)
         params = vars(get_params())
         params.update(tuner_params)
-
+        
         main(params)
     except Exception as exception:
         logger.exception(exception)
